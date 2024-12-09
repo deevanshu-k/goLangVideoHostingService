@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -8,7 +10,16 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
+var (
+	host string
+	port int
+)
+
 func main() {
+	flag.StringVar(&host, "host", "127.0.0.1", "-host is required")
+	flag.IntVar(&port, "port", 8000, "-port is required")
+	flag.Parse()
+
 	app := fiber.New(fiber.Config{
 		BodyLimit: 100 * 1024 * 1024, // 100 MB,
 	})
@@ -19,7 +30,7 @@ func main() {
 	videoApi := api.Group("/video")
 	videoApi.Post("/upload", uploadVideo)
 	videoApi.Static("/get", "./output")
-	videoApi.Get("/:id<int>", getVideoStream)
+	videoApi.Get("", getVideos)
 
 	app.Get("*", func(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{
@@ -27,5 +38,5 @@ func main() {
 		})
 	})
 
-	log.Fatal(app.Listen("127.0.0.1:8000"))
+	log.Fatal(app.Listen(fmt.Sprintf("%s:%d", host, port)))
 }

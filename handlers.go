@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -23,7 +24,8 @@ func uploadVideo(c *fiber.Ctx) error {
 	}
 
 	// Open the destination file writer
-	dstPath := fmt.Sprintf("./temp/%s", file.Filename)
+	fileName := strings.ReplaceAll(file.Filename, " ", "_")
+	dstPath := fmt.Sprintf("./temp/%s", fileName)
 	dstFile, err := os.Create(dstPath)
 	if err != nil {
 		return c.Status(500).SendString(err.Error())
@@ -38,7 +40,9 @@ func uploadVideo(c *fiber.Ctx) error {
 	}
 
 	// Convert and save video to output folder
-	convertVideoToHLS(file.Filename)
+	if err := convertVideoToHLS(fileName); err != nil {
+		return c.Status(500).SendString(err.Error())
+	}
 
 	// Delete the temp file
 	if err := os.Remove(dstPath); err != nil {
@@ -48,8 +52,35 @@ func uploadVideo(c *fiber.Ctx) error {
 	return c.Status(200).SendString("Upload Video")
 }
 
-func getVideoStream(c *fiber.Ctx) error {
-	return c.Status(200).SendString("Get Video Stream")
+func getVideos(c *fiber.Ctx) error {
+	var list []string
+
+	// Open the directory
+	dir, err := os.Open("./output")
+	if err != nil {
+		return fmt.Errorf("error opening directory: %s", err)
+	}
+	defer dir.Close()
+
+	// Read directory entries
+	for {
+		entries, err := dir.Readdir(10) // Read 10 files at a time
+		if err != nil {
+			if err == io.EOF {
+				break // End of directory
+			}
+			return fmt.Errorf("error reading directory: %s", err)
+		}
+
+		// Print file names
+		for _, entry := range entries {
+			list = append(list, fmt.Sprintf("http://%s:%d/api/video/get/%s/playlist.m3u8", host, port, entry.Name()))
+		}
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"list": list,
+	})
 }
 
 func convertVideoToHLS(src string) error {
