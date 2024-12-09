@@ -21,7 +21,7 @@ func main() {
 	flag.Parse()
 
 	app := fiber.New(fiber.Config{
-		BodyLimit: 100 * 1024 * 1024, // 100 MB,
+		BodyLimit: 1000 * 1024 * 1024, // 1000 MB,
 	})
 	app.Use(logger.New())
 	app.Use(cors.New())
