@@ -21,7 +21,6 @@ func uploadVideo(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).SendString(err.Error())
 	}
-	defer srcFile.Close()
 
 	// Open the destination file writer
 	dstPath := fmt.Sprintf("./temp/%s", file.Filename)
@@ -29,10 +28,12 @@ func uploadVideo(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(500).SendString(err.Error())
 	}
-	defer dstFile.Close()
 
 	// Copy the source file to destination file
-	if _, err := io.Copy(dstFile, srcFile); err != nil {
+	_, err = io.Copy(dstFile, srcFile)
+	srcFile.Close() // Explicitly close the source file after copying
+	dstFile.Close() // Close the destination file
+	if err != nil {
 		return c.Status(500).SendString(err.Error())
 	}
 
@@ -52,15 +53,14 @@ func getVideoStream(c *fiber.Ctx) error {
 }
 
 func convertVideoToHLS(src string) error {
-	// // Ensure the output directory exists
-	// outputDir := "./output"
-	// if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-	// 	err := os.Mkdir(outputDir, os.ModePerm)
-	// 	if err != nil {
-	// 		fmt.Printf("Error creating output directory: %s\n", err)
-	// 		return
-	// 	}
-	// }
+	// Ensure the output directory exists
+	outputDir := "./output/" + src
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		err := os.Mkdir(outputDir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("error creating output directory: %s", err)
+		}
+	}
 
 	// Build the ffmpeg command
 	cmd := exec.Command(
@@ -72,8 +72,8 @@ func convertVideoToHLS(src string) error {
 		"-f", "hls", // Output format
 		"-hls_time", "10", // Segment duration
 		"-hls_list_size", "0", // Include all segments in the playlist
-		"-hls_segment_filename", "output/segment_%03d.ts", // Segment filename pattern
-		"output/playlist.m3u8", // Playlist file
+		"-hls_segment_filename", "output/"+src+"/segment_%03d.ts", // Segment filename pattern
+		"output/"+src+"/playlist.m3u8", // Playlist file
 	)
 
 	// Set stdout and stderr to display command output
@@ -84,7 +84,7 @@ func convertVideoToHLS(src string) error {
 	err := cmd.Run()
 	if err != nil {
 
-		return fmt.Errorf("error running ffmpeg: %s\n", err)
+		return fmt.Errorf("error running ffmpeg: %s", err)
 	}
 
 	fmt.Println("HLS segments and playlist created successfully.")
