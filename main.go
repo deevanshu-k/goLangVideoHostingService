@@ -9,7 +9,9 @@ import (
 )
 
 func main() {
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit: 100 * 1024 * 1024, // 100 MB,
+	})
 	app.Use(logger.New())
 	app.Use(cors.New())
 	api := app.Group("/api")

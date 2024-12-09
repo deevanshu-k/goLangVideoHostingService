@@ -1,4 +1,6 @@
 .vscode
 tmp
-/output/*
+/temp/*
+!/temp/.gitkeep
+/output/*temp
 !/output/.gitkeep
