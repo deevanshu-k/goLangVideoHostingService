@@ -2,5 +2,5 @@
 tmp
 /temp/*
 !/temp/.gitkeep
-/output/*temp
+/output/*
 !/output/.gitkeep
